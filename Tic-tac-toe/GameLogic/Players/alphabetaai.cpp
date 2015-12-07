@@ -10,22 +10,28 @@ AlphaBetaAi::AlphaBetaAi(Game *game, PlayerType playerType, QObject *parent) :
 
 void AlphaBetaAi::makeStep()
 {
-    int depth = 2;
+	int depth = 5;
+
     GameField field = getGame()->getField();
     QVector<Move> moves = generateAllMoves(field);
-    Move bestMove = moves.at(0);
-    makeMove(moves.at(0), getPlayerType(), field);
-    int scoreBestMove = -alphaBeta(depth, computeOpositePlayer(getPlayerType()), -RAND_MAX, RAND_MAX, field);
-    unMakeMove(moves.at(0), field);
-    for(int i = 0; i < moves.size(); ++i)
+
+	int alpha = -RAND_MAX;
+	int beta = RAND_MAX;
+
+	makeMove(moves.at(0), getPlayerType(), field);
+	alpha = -alphaBeta(depth, computeOpositePlayer(getPlayerType()), -beta, -alpha, field);
+	unMakeMove(moves.at(0), field);
+
+	Move bestMove = moves.at(0);
+	for(int i = 1; i < moves.size(); ++i)
     {
         makeMove(moves.at(i), getPlayerType(), field);
-        int scoreMove = -alphaBeta(depth, computeOpositePlayer(getPlayerType()), -RAND_MAX, RAND_MAX, field);
+		int scoreMove = -alphaBeta(depth, computeOpositePlayer(getPlayerType()), -beta, -alpha, field);
         unMakeMove(moves.at(i), field);
         qDebug() << moves.at(i).row << moves.at(i).column << scoreMove ;
-        if (scoreMove > scoreBestMove)
+		if (scoreMove > alpha)
         {
-            scoreBestMove = scoreMove;
+			alpha = scoreMove;
             bestMove = moves.at(i);
         }
     }
@@ -37,25 +43,30 @@ int AlphaBetaAi::alphaBeta(int depth, PlayerType player, int alpha, int beta, Ga
 {
     if((depth == 0) || (getGame()->computeGameState(field) != continues))
     {
-        return ratingField(player, field);
+		return ratingField(player, field);
     }
 
     QVector<Move> moves = generateOptimalMoves(field);
     PlayerType opPlayer = (player == playerOne ? playerTwo : playerOne);
 
+	int max = -RAND_MAX;
     for(int i = 0; i < moves.size() && (alpha < beta); ++i)
     {
         makeMove(moves.at(i), player, field);
         int tmp = -alphaBeta(depth-1, opPlayer, -beta, -alpha, field);
         unMakeMove(moves.at(i), field);
-        if(tmp > alpha) alpha = tmp;
+
+		if( tmp > beta ) return -RAND_MAX;
+		if( tmp > max ) max = tmp;
+		if( max > alpha ) alpha = max;
     }
-    return alpha;
+	return max;
 
 }
 
 int AlphaBetaAi::ratingField(PlayerType player, const GameField &field)
 {
+	// Где-то здесь ошибка. Всегда возращается 0.
     GameState state = getGame()->computeGameState(field);
     if(state == playerOneWin)
     {
